@@ -1,6 +1,6 @@
-clear all
-clc
-close all
+clear;
+clc;
+close all;
 
 %% Create a video input object.
 vid = videoinput("winvideo", 1, "YUY2_320x240");
@@ -9,6 +9,8 @@ vid = videoinput("winvideo", 1, "YUY2_320x240");
 start(vid);
 snapshot1 = ycbcr2rgb(getsnapshot(vid));
 stop(vid);
+
+% Get region of interest for target color
 figure(1);
 imshow(snapshot1);
 region = roipoly();
@@ -23,16 +25,14 @@ triggerconfig(vid, 'manual');
 % Start the video input object.
 start(vid);
 
-% Create a figure window to display the live video.
+% Create a figure window to display the live video and the mask
 figure;
+subplot(1,2,1); % Image subplot
 hImage = image(zeros(240, 320, 3), 'CDataMapping', 'scaled'); % Initialize a blank image
 axis image off; % Turn off axis
-set(gca, 'unit', 'normalized', 'position', [0 0 1 1]); % Expand axis to fill figure
-
-% Initialize the plot for the centroid with a dummy point
-hold on;
-hCentroid = plot(0, 0, 'ro'); % Initialize centroid marker
-hold off;
+subplot(1,2,2); % Mask subplot
+hMask = imshow(false(240, 320)); % Initialize a blank logical image for the mask
+axis image off; % Turn off axis
 
 % Keep running the loop until the figure is closed.
 while ishandle(gcf)
@@ -42,14 +42,9 @@ while ishandle(gcf)
     diff = abs(double(snapshot1) - reshape(promColor, [1, 1, 3]));  % Broadcasting mean color across the image dimensions
     Mascara = all(diff < umbral, 3);
 
-    [x, y] = find(Mascara);
-    if ~isempty(x) && ~isempty(y)
-        Cx = mean(x);
-        Cy = mean(y);
-        set(hCentroid, 'XData', Cy, 'YData', Cx); % Update centroid position
-    end
-
-    set(hImage, 'CData', snapshot1); % Update the image
+    % Update the live video display
+    set(hImage, 'CData', snapshot1); % Update the image data
+    set(hMask, 'CData', Mascara); % Update the mask data
     drawnow; % Update the figure window
 end
 
