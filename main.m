@@ -30,9 +30,14 @@ figure;
 subplot(1,2,1); % Image subplot
 hImage = image(zeros(240, 320, 3), 'CDataMapping', 'scaled'); % Initialize a blank image
 axis image off; % Turn off axis
+hold on;
+hCentroidImage = plot(0, 0, 'ro'); % Initialize centroid marker for the image
+
 subplot(1,2,2); % Mask subplot
 hMask = imshow(false(240, 320)); % Initialize a blank logical image for the mask
 axis image off; % Turn off axis
+hold on;
+hCentroidMask = plot(0, 0, 'ro'); % Initialize centroid marker for the mask
 
 % Keep running the loop until the figure is closed.
 while ishandle(gcf)
@@ -41,6 +46,14 @@ while ishandle(gcf)
     umbral = 30;
     diff = abs(double(snapshot1) - reshape(promColor, [1, 1, 3]));  % Broadcasting mean color across the image dimensions
     Mascara = all(diff < umbral, 3);
+
+    [x, y] = find(Mascara);
+    if ~isempty(x) && ~isempty(y)
+        Cx = mean(x);
+        Cy = mean(y);
+        set(hCentroidImage, 'XData', Cy, 'YData', Cx); % Update centroid position in image
+        set(hCentroidMask, 'XData', Cy, 'YData', Cx); % Update centroid position in mask
+    end
 
     % Update the live video display
     set(hImage, 'CData', snapshot1); % Update the image data
