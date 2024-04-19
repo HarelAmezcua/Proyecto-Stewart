@@ -5,17 +5,19 @@ close all;
 %% Create a video input object.
 vid = videoinput("winvideo", 1, "YUY2_320x240");
 
-%% To identify the target color
+%% To identify the target colortic
 start(vid);
 snapshot1 = ycbcr2rgb(getsnapshot(vid));
+snapshot1 = rgb2hsv(snapshot1);  % Convert RGB to HSV
 stop(vid);
 
 % Get region of interest for target color
 figure(1);
-imshow(snapshot1);
+imshow(hsv2rgb(snapshot1));
 region = roipoly();
-colorMask = snapshot1 .* uint8(region);  % Use integer operations directly
-promColor = sum(reshape(colorMask, [], 3), 1) ./ sum(region(:));
+colorMask = snapshot1 .* cat(3, region, region, region);  % Apply the region mask to each channel
+promColor = sum(reshape(colorMask, [], 3), 1) ./ sum(region(:));  % Gets an average color
+close(figure(1));  % Close the figure after selecting the region
 
 % Set parameters for video input.
 set(vid, 'FramesPerTrigger', 1);
@@ -43,9 +45,10 @@ hCentroidMask = plot(0, 0, 'ro'); % Initialize centroid marker for the mask
 while ishandle(gcf)
     trigger(vid);
     snapshot1 = ycbcr2rgb(getsnapshot(vid));
-    umbral = 30;
-    diff = abs(double(snapshot1) - reshape(promColor, [1, 1, 3]));  % Broadcasting mean color across the image dimensions
-    Mascara = all(diff < umbral, 3);
+    snapshot1 = rgb2hsv(snapshot1);  % Convert RGB to HSV in the loop
+    umbral = 0.1;  % Adjust threshold for HSV comparison
+    diff = abs(snapshot1 - reshape(promColor, [1, 1, 3]));  % Broadcasting mean color
+    Mascara = all(diff < umbral, 3);  % Change comparison logic for HSV
 
     [x, y] = find(Mascara);
     if ~isempty(x) && ~isempty(y)
@@ -56,7 +59,7 @@ while ishandle(gcf)
     end
 
     % Update the live video display
-    set(hImage, 'CData', snapshot1); % Update the image data
+    set(hImage, 'CData', hsv2rgb(snapshot1)); % Convert back to RGB for display
     set(hMask, 'CData', Mascara); % Update the mask data
     drawnow; % Update the figure window
 end
